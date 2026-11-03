@@ -1,7 +1,7 @@
 {
  "name":"LastHope.Runtime",
  "rootNamespace":"LastHope",
- "references":["Unity.InputSystem"],
+ "references":["Unity.InputSystem","Unity.UGUI"],
  "includePlatforms":[],
  "excludePlatforms":[],
  "allowUnsafeCode":false,
