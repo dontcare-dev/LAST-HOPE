@@ -6,7 +6,7 @@ namespace LastHope.World {
    RenderSettings.ambientLight=new Color(.48f,.48f,.48f);
    var ground=GameObject.CreatePrimitive(PrimitiveType.Cube);ground.name="Greybox Ground";ground.transform.position=new Vector3(0,-.5f,0);ground.transform.localScale=new Vector3(60,1,60);ground.GetComponent<Renderer>().material.color=new Color(.22f,.28f,.22f);
    var player=new GameObject("Player");player.transform.position=new Vector3(0,1,0);var cc=player.AddComponent<CharacterController>();cc.height=1.8f;cc.radius=.32f;
-   var motor=player.AddComponent<FirstPersonMotor>();player.AddComponent<SurvivalVitals>();var interactor=player.AddComponent<PlayerInteractor>();
+   var motor=player.AddComponent<FirstPersonMotor>();player.AddComponent<SurvivalVitals>();player.AddComponent<SurvivalSave>();player.AddComponent<DeathHandler>();var interactor=player.AddComponent<PlayerInteractor>();
    var camObj=new GameObject("Player Camera");camObj.tag="MainCamera";camObj.transform.SetParent(player.transform);camObj.transform.localPosition=new Vector3(0,.62f,0);camObj.transform.localRotation=Quaternion.identity;var cam=camObj.AddComponent<Camera>();cam.fieldOfView=75;camObj.AddComponent<AudioListener>();motor.SetCameraPivot(camObj.transform);
    var eventObj=new GameObject("EventSystem");eventObj.AddComponent<EventSystem>();eventObj.AddComponent<StandaloneInputModule>();
    var canvasObj=new GameObject("Mobile HUD");var canvas=canvasObj.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvasObj.AddComponent<CanvasScaler>();canvasObj.AddComponent<GraphicRaycaster>();
