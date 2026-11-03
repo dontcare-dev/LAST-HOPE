@@ -21,7 +21,7 @@ namespace LastHope.World
             var player=new GameObject("Player");
             player.transform.position=new Vector3(0,1,0);
             var cc=player.AddComponent<CharacterController>();cc.height=1.8f;cc.radius=.32f;cc.center=new Vector3(0,.0f,0);
-            player.AddComponent<FirstPersonMotor>();player.AddComponent<SurvivalVitals>();
+            player.AddComponent<FirstPersonMotor>();player.AddComponent<SurvivalVitals>();player.AddComponent<LastHope.Interaction.PlayerInteractor>();
             var camObj=new GameObject("Player Camera");camObj.tag="MainCamera";camObj.transform.SetParent(player.transform);
             camObj.transform.localPosition=new Vector3(0,.62f,0);camObj.transform.localRotation=Quaternion.identity;
             var cam=camObj.AddComponent<Camera>();cam.fieldOfView=75;camObj.AddComponent<AudioListener>();
@@ -33,7 +33,7 @@ namespace LastHope.World
             CreateObstacle(new Vector3(-5,.75f,10),new Vector3(3,1.5f,2));
             var light=new GameObject("Sun");var sun=light.AddComponent<Light>();sun.type=LightType.Directional;sun.intensity=1.1f;light.transform.rotation=Quaternion.Euler(50,-30,0);
         }
-        void CreatePickup(string n,Vector3 p,ConsumableType type,Color c){var o=GameObject.CreatePrimitive(PrimitiveType.Cylinder);o.name=n;o.transform.position=p;o.transform.localScale=new Vector3(.35f,.35f,.35f);o.GetComponent<Renderer>().material.color=c;o.AddComponent<ConsumablePickup>();}
+        void CreatePickup(string n,Vector3 p,ConsumableType type,Color c){var o=GameObject.CreatePrimitive(PrimitiveType.Cylinder);o.name=n;o.transform.position=p;o.transform.localScale=new Vector3(.35f,.35f,.35f);o.GetComponent<Renderer>().material.color=c;o.AddComponent<ConsumablePickup>().Configure(type,35f);}
         void CreateObstacle(Vector3 p,Vector3 s){var o=GameObject.CreatePrimitive(PrimitiveType.Cube);o.name="Greybox Shelter";o.transform.position=p;o.transform.localScale=s;o.GetComponent<Renderer>().material.color=new Color(.35f,.32f,.28f);}
     }
 }
