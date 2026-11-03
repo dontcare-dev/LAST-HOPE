@@ -5,6 +5,7 @@ namespace LastHope.Player {
   [SerializeField,Min(0)] float walkSpeed=4.2f,sprintSpeed=6.5f,jumpHeight=1.15f;
   [SerializeField] float gravity=-20f; [SerializeField] Transform cameraPivot;
   CharacterController controller; Vector2 moveInput; float verticalVelocity; bool sprintHeld,jumpQueued;
+  public void SetCameraPivot(Transform pivot)=>cameraPivot=pivot;
   public void SetMoveInput(Vector2 v)=>moveInput=Vector2.ClampMagnitude(v,1f);
   public void SetSprint(bool held)=>sprintHeld=held; public void QueueJump()=>jumpQueued=true;
   void Awake(){controller=GetComponent<CharacterController>();if(!cameraPivot&&Camera.main)cameraPivot=Camera.main.transform;}
