@@ -1,4 +1,4 @@
-using UnityEngine;using UnityEngine.UI;using LastHope.Player;using LastHope.Survival;using LastHope.Interaction;
+using UnityEngine;using UnityEngine.UI;using UnityEngine.EventSystems;using LastHope.Player;using LastHope.Survival;using LastHope.Interaction;
 namespace LastHope.UI {
  public sealed class MobileHUD:MonoBehaviour {
   [SerializeField]FirstPersonMotor motor;[SerializeField]SurvivalVitals vitals;[SerializeField]PlayerInteractor interactor;[SerializeField]VirtualJoystick joystick;
