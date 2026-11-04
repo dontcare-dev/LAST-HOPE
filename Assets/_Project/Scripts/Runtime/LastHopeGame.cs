@@ -1,0 +1,50 @@
+using System;using System.Collections.Generic;using System.IO;using UnityEngine;using UnityEngine.EventSystems;using UnityEngine.UI;
+namespace LastHope {
+ public enum ItemKind{Berry,Water,Wood,Stone,Bandage}
+ [Serializable]public class ItemStack{public ItemKind item;public int count;public ItemStack(ItemKind i,int n){item=i;count=n;}}
+ [Serializable]public class SaveData{public float hp,hunger,thirst;public Vector3 position;public Quaternion rotation;public List<ItemStack> inventory=new List<ItemStack>();}
+ public sealed class LastHopeGame:MonoBehaviour{
+  public static LastHopeGame Instance{get;private set;}public CharacterController controller;public Camera viewCamera;public float walk=4,sprint=6.5f,jump=1.2f,lookSensitivity=.12f;
+  public float health=100,hunger=100,thirst=100,hungerDrain=.12f,thirstDrain=.2f;public float worldSize=70,dayLengthMinutes=18;public Light sun;
+  public Text statusText,inventoryText;public Slider hpBar,hungerBar,thirstBar;readonly List<ItemStack> inventory=new List<ItemStack>();Vector2 move;float vertical,pitch;bool sprint,paused,dead;Transform player;
+  string SavePath=>Path.Combine(Application.persistentDataPath,"last-hope-save.json");
+  void Awake(){if(Instance&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);}
+  void Start(){BuildWorld();BuildHUD();RefreshUI();}
+  void Update(){if(dead||paused)return;MovePlayer();SurvivalTick();CycleSun();RefreshUI();}
+  void MovePlayer(){if(!controller)return;if(controller.isGrounded&&vertical<0)vertical=-2;vertical+=-20*Time.deltaTime;Vector3 d=(player.right*move.x+player.forward*move.y)*(sprint?walk*1.55f:walk);d.y=vertical;controller.Move(d*Time.deltaTime);}
+  void SurvivalTick(){hunger=Mathf.Max(0,hunger-hungerDrain*Time.deltaTime);thirst=Mathf.Max(0,thirst-thirstDrain*Time.deltaTime);if(hunger<=0)health-=Time.deltaTime;if(thirst<=0)health-=2*Time.deltaTime;if(health<=0)Die();}
+  void CycleSun(){if(!sun)return;float t=(Time.time/(dayLengthMinutes*60))%1;sun.transform.rotation=Quaternion.Euler(t*360-90,170,0);sun.intensity=Mathf.Clamp01(Mathf.Sin(t*Mathf.PI*2)*.5f+.5f)*1.2f;}
+  public void MoveInput(Vector2 v)=>move=Vector2.ClampMagnitude(v,1);public void Sprint(bool b)=>sprint=b;public void Jump(){if(controller&&controller.isGrounded)vertical=Mathf.Sqrt(jump*40);}
+  public void Look(Vector2 d){if(!player)return;player.Rotate(0,d.x*lookSensitivity,0);pitch=Mathf.Clamp(pitch-d.y*lookSensitivity,-85,85);if(viewCamera)viewCamera.transform.localRotation=Quaternion.Euler(pitch,0,0);}
+  void BuildWorld(){player=new GameObject("Player").transform;player.position=new Vector3(0,1,0);controller=player.gameObject.AddComponent<CharacterController>();controller.height=1.8f;controller.radius=.32f;
+   viewCamera=new GameObject("Main Camera").AddComponent<Camera>();viewCamera.tag="MainCamera";viewCamera.transform.SetParent(player);viewCamera.transform.localPosition=new Vector3(0,.62f,0);viewCamera.fieldOfView=75;viewCamera.gameObject.AddComponent<AudioListener>();
+   Cube("Ground",new Vector3(0,-.5f,0),new Vector3(worldSize,1,worldSize),new Color(.22f,.28f,.22f));
+   for(int i=0;i<24;i++){Vector3 p=new Vector3(UnityEngine.Random.Range(-worldSize/2+4,worldSize/2-4),.8f,UnityEngine.Random.Range(-worldSize/2+4,worldSize/2-4));Cube("Ruins/Tree",p,new Vector3(UnityEngine.Random.Range(1,3),UnityEngine.Random.Range(1,4),UnityEngine.Random.Range(1,3)),new Color(.3f,.32f,.27f));}
+   PickupAt(ItemKind.Berry,new Vector3(3,.3f,4));PickupAt(ItemKind.Water,new Vector3(-3,.3f,4));PickupAt(ItemKind.Wood,new Vector3(4,.3f,8));PickupAt(ItemKind.Stone,new Vector3(-4,.3f,8));sun=new GameObject("Sun").AddComponent<Light>();sun.type=LightType.Directional;sun.transform.rotation=Quaternion.Euler(50,-30,0);
+  }
+  void Cube(string n,Vector3 p,Vector3 s,Color c){var o=GameObject.CreatePrimitive(PrimitiveType.Cube);o.name=n;o.transform.position=p;o.transform.localScale=s;o.GetComponent<Renderer>().material.color=c;}
+  void PickupAt(ItemKind k,Vector3 p){var o=GameObject.CreatePrimitive(k==ItemKind.Stone?PrimitiveType.Sphere:PrimitiveType.Cylinder);o.name="Pickup "+k;o.transform.position=p;o.transform.localScale=Vector3.one*.5f;o.GetComponent<Renderer>().material.color=k==ItemKind.Water?Color.cyan:k==ItemKind.Berry?Color.red:k==ItemKind.Wood?new Color(.45f,.22f,.08f):Color.gray;o.AddComponent<Pickup>().kind=k;}
+  void BuildHUD(){var ev=new GameObject("EventSystem");ev.AddComponent<EventSystem>();ev.AddComponent<StandaloneInputModule>();var go=new GameObject("Mobile UI");var cv=go.AddComponent<Canvas>();cv.renderMode=RenderMode.ScreenSpaceOverlay;go.AddComponent<CanvasScaler>();go.AddComponent<GraphicRaycaster>();
+   hpBar=Bar(cv.transform,"HP",new Vector2(20,-30),Color.red);hungerBar=Bar(cv.transform,"Hunger",new Vector2(20,-60),Color.yellow);thirstBar=Bar(cv.transform,"Thirst",new Vector2(20,-90),Color.cyan);
+   statusText=Label(cv.transform,"",new Vector2(0,0),new Vector2(.5f,0),new Vector2(500,35));inventoryText=Label(cv.transform,"",new Vector2(20,-125),new Vector2(0,1),new Vector2(360,70));
+   Btn(cv.transform,"JUMP",new Vector2(-130,150),new Vector2(1,0),Jump);Btn(cv.transform,"USE",new Vector2(-270,150),new Vector2(1,0),Interact);Btn(cv.transform,"CRAFT",new Vector2(-130,260),new Vector2(1,0),CraftBandage);Btn(cv.transform,"SAVE",new Vector2(-130,370),new Vector2(1,0),Save);Btn(cv.transform,"LOAD",new Vector2(-270,370),new Vector2(1,0),Load);Btn(cv.transform,"RUN",new Vector2(-130,470),new Vector2(1,0),()=>Sprint(!sprint));
+   var stick=Panel(cv.transform,"Joystick",new Vector2(150,140),new Vector2(0,0),new Vector2(170,170));stick.gameObject.AddComponent<Image>().color=new Color(1,1,1,.15f);stick.gameObject.AddComponent<Stick>();
+   var look=Panel(cv.transform,"Look",Vector2.zero,new Vector2(.4f,0),Vector2.zero);look.anchorMax=new Vector2(1,1);look.offsetMin=look.offsetMax=Vector2.zero;look.gameObject.AddComponent<LookTouch>();
+  }
+  Slider Bar(Transform p,string n,Vector2 pos,Color c){var r=Panel(p,n,pos,new Vector2(0,1),new Vector2(220,18));r.gameObject.AddComponent<Image>().color=new Color(.1f,.1f,.1f,.5f);var s=r.gameObject.AddComponent<Slider>();s.minValue=0;s.maxValue=100;s.value=100;return s;}
+  RectTransform Panel(Transform p,string n,Vector2 pos,Vector2 a,Vector2 size){var o=new GameObject(n,typeof(RectTransform));o.transform.SetParent(p,false);var r=o.GetComponent<RectTransform>();r.anchorMin=r.anchorMax=a;r.anchoredPosition=pos;r.sizeDelta=size;return r;}
+  Text Label(Transform p,string text,Vector2 pos,Vector2 a,Vector2 size){var r=Panel(p,"Label",pos,a,size);var t=r.gameObject.AddComponent<Text>();t.font=Resources.GetBuiltinResource<Font>("Arial.ttf");t.color=Color.white;t.text=text;t.fontSize=18;return t;}
+  void Btn(Transform p,string text,Vector2 pos,Vector2 a,UnityEngine.Events.UnityAction act){var r=Panel(p,text,pos,a,new Vector2(100,78));r.gameObject.AddComponent<Image>().color=new Color(.08f,.08f,.08f,.65f);var b=r.gameObject.AddComponent<Button>();b.onClick.AddListener(act);Label(r,text,Vector2.zero,new Vector2(.5f,.5f),new Vector2(100,78)).alignment=TextAnchor.MiddleCenter;}
+  void RefreshUI(){if(hpBar)hpBar.value=health;if(hungerBar)hungerBar.value=hunger;if(thirstBar)thirstBar.value=thirst;if(statusText)statusText.text=dead?"YOU DIED":paused?"PAUSED":"LAST HOPE • survive";if(inventoryText)inventoryText.text="Bag: "+string.Join(" | ",inventory.ConvertAll(x=>x.item+" x"+x.count));}
+  public void AddItem(ItemKind k,int n=1){var s=inventory.Find(x=>x.item==k);if(s==null)inventory.Add(new ItemStack(k,n));else s.count+=n;}public bool Has(ItemKind k,int n){var s=inventory.Find(x=>x.item==k);return s!=null&&s.count>=n;}void Consume(ItemKind k,int n){var s=inventory.Find(x=>x.item==k);if(s==null)return;s.count-=n;if(s.count<=0)inventory.Remove(s);}
+  void Interact(){if(!viewCamera)return;if(Physics.Raycast(viewCamera.transform.position,viewCamera.transform.forward,out var hit,3)){var p=hit.collider.GetComponent<Pickup>();if(p){AddItem(p.kind);Destroy(p.gameObject);return;}var r=hit.collider.GetComponent<Resource>();if(r)r.Harvest();}}
+  void CraftBandage(){if(Has(ItemKind.Berry,2)&&Has(ItemKind.Wood,1)){Consume(ItemKind.Berry,2);Consume(ItemKind.Wood,1);AddItem(ItemKind.Bandage);}}
+  void Save(){var d=new SaveData{hp=health,hunger=hunger,thirst=thirst,position=player.position,rotation=player.rotation,inventory=inventory};File.WriteAllText(SavePath,JsonUtility.ToJson(d,true));}
+  void Load(){if(!File.Exists(SavePath))return;var d=JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));health=d.hp;hunger=d.hunger;thirst=d.thirst;player.SetPositionAndRotation(d.position,d.rotation);inventory.Clear();inventory.AddRange(d.inventory);}
+  void Die(){dead=true;if(statusText)statusText.text="YOU DIED";Time.timeScale=0;}public void Restart(){Time.timeScale=1;UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);}public void TogglePause(){paused=!paused;Time.timeScale=paused?0:1;}
+ }
+ public sealed class Pickup:MonoBehaviour{public ItemKind kind;}
+ public sealed class Resource:MonoBehaviour{public ItemKind kind=ItemKind.Wood;public int yield=2;public void Harvest(){if(LastHopeGame.Instance){LastHopeGame.Instance.AddItem(kind,yield);Destroy(gameObject);}}}
+ public sealed class Stick:MonoBehaviour,IPointerDownHandler,IPointerUpHandler,IDragHandler{Vector2 start;public void OnPointerDown(PointerEventData e){start=e.position;OnDrag(e);}public void OnDrag(PointerEventData e){LastHopeGame.Instance?.MoveInput(Vector2.ClampMagnitude((e.position-start)/75,1));}public void OnPointerUp(PointerEventData e){LastHopeGame.Instance?.MoveInput(Vector2.zero);}}
+ public sealed class LookTouch:MonoBehaviour,IPointerDownHandler,IPointerUpHandler,IDragHandler{Vector2 last;bool down;public void OnPointerDown(PointerEventData e){last=e.position;down=true;}public void OnDrag(PointerEventData e){if(down){LastHopeGame.Instance?.Look(e.position-last);last=e.position;}}public void OnPointerUp(PointerEventData e){down=false;}}
+}
